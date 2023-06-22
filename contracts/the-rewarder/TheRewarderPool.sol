@@ -54,6 +54,7 @@ contract TheRewarderPool {
             revert InvalidDepositAmount();
         }
 
+
         accountingToken.mint(msg.sender, amount);
         distributeRewards();
 
